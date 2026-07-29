@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS
 
 Guidance for Claude Code (and other AI assistants) working in this repo.
 

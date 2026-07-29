@@ -74,7 +74,7 @@ CRDT data model and snapshot/restore semantics; wiring a real provider
     — version-history operations over `Y.encodeStateAsUpdate` bytes.
 - `README.md` — One-paragraph project summary plus dev-server commands.
 - `DEV.md` — Quick-start install + dev commands.
-- `CLAUDE.md` — Agent-facing repo notes.
+- `AGENTS` — Agent-facing repo notes.
 
 ## Build & Release Flow
 
