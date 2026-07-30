@@ -50,7 +50,7 @@ deterministic conflict-free merging. The README has the long version under
 
 ### Textarea ↔ `Y.Text` binding (the prefix/suffix diff)
 
-`<textarea onChange>` gives us the *new full string*. We deliberately do
+`<textarea onChange>` gives us the _new full string_. We deliberately do
 **not** call `ytext.delete(0, ytext.length); ytext.insert(0, next)` — that
 would replace the whole doc on every keystroke and throw away the CRDT op
 history that the demo exists to showcase.
@@ -164,8 +164,8 @@ If asked to fix this, the smallest viable change is a `BroadcastChannel`
 in `App.jsx`:
 
 ```js
-const bc = new BroadcastChannel('crdt-editor');
-doc.on('update', (update, origin) => {
+const bc = new BroadcastChannel("crdt-editor");
+doc.on("update", (update, origin) => {
   if (origin === bc) return;
   bc.postMessage(update);
   // existing localStorage write...
@@ -183,7 +183,7 @@ together. Either is fine; pick based on what the user is asking for.
 - **Don't introduce a UI framework** (Tailwind, MUI, shadcn). The styling is
   intentionally plain.
 - **Don't replace `localStorage` with IndexedDB / `y-indexeddb`** unless the
-  user asks — the README lists it as a *suggested extension*, not a TODO.
+  user asks — the README lists it as a _suggested extension_, not a TODO.
 - **Don't silently swap `Y.encodeStateAsUpdate` for `Y.snapshot`.** They solve
   related but different problems; the README mentions snapshots as an
   extension idea.

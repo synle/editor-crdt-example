@@ -51,19 +51,23 @@ with a deterministic, conflict-free merge — no central server required.
 ### API used in this demo
 
 ```js
-import * as Y from 'yjs';
+import * as Y from "yjs";
 
 const doc = new Y.Doc();
-const ytext = doc.getText('content');   // get-or-create a Y.Text named "content"
+const ytext = doc.getText("content"); // get-or-create a Y.Text named "content"
 
-ytext.insert(0, 'Hello');                // insert at index
-ytext.insert(5, ' world');
-ytext.delete(0, 1);                      // delete N chars at index
-ytext.toString();                        // serialise to plain string
-ytext.length;                            // length in characters
+ytext.insert(0, "Hello"); // insert at index
+ytext.insert(5, " world");
+ytext.delete(0, 1); // delete N chars at index
+ytext.toString(); // serialise to plain string
+ytext.length; // length in characters
 
-doc.on('update', (update) => { /* binary CRDT update emitted */ });
-ytext.observe((event) => { /* fine-grained delta */ });
+doc.on("update", (update) => {
+  /* binary CRDT update emitted */
+});
+ytext.observe((event) => {
+  /* fine-grained delta */
+});
 
 // Snapshot the entire document state (used for our version history):
 const bytes = Y.encodeStateAsUpdate(doc);
@@ -156,8 +160,8 @@ a text-only channel.
 The two helpers in `src/App.jsx`:
 
 ```js
-const toBase64   = (bytes) => btoa(String.fromCharCode(...bytes));
-const fromBase64 = (b64)   => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 ```
 
 ### Round-trip on reload
@@ -192,16 +196,16 @@ column for nothing.
 
 ### Type mapping
 
-| Storage | Type |
-|---|---|
-| Postgres | `BYTEA` |
-| MySQL | `BLOB` / `LONGBLOB` |
-| SQLite | `BLOB` |
-| MongoDB | `BinData` (`Buffer`) |
-| Redis | binary string (default) |
-| S3 / object store | the `Uint8Array` as the object body |
-| DynamoDB | `B` (Binary) attribute |
-| IndexedDB (browser) | `Uint8Array` directly — no base64 |
+| Storage             | Type                                |
+| ------------------- | ----------------------------------- |
+| Postgres            | `BYTEA`                             |
+| MySQL               | `BLOB` / `LONGBLOB`                 |
+| SQLite              | `BLOB`                              |
+| MongoDB             | `BinData` (`Buffer`)                |
+| Redis               | binary string (default)             |
+| S3 / object store   | the `Uint8Array` as the object body |
+| DynamoDB            | `B` (Binary) attribute              |
+| IndexedDB (browser) | `Uint8Array` directly — no base64   |
 
 ### Strategy A — snapshot-only (simplest)
 
@@ -217,16 +221,18 @@ CREATE TABLE documents (
 ```
 
 Save:
+
 ```js
-await pg.query(
-  'UPDATE documents SET state = $1, updated_at = now() WHERE id = $2',
-  [Buffer.from(Y.encodeStateAsUpdate(doc)), id]
-);
+await pg.query("UPDATE documents SET state = $1, updated_at = now() WHERE id = $2", [
+  Buffer.from(Y.encodeStateAsUpdate(doc)),
+  id,
+]);
 ```
 
 Load:
+
 ```js
-const { rows } = await pg.query('SELECT state FROM documents WHERE id = $1', [id]);
+const { rows } = await pg.query("SELECT state FROM documents WHERE id = $1", [id]);
 const doc = new Y.Doc();
 Y.applyUpdate(doc, new Uint8Array(rows[0].state));
 ```
@@ -249,29 +255,31 @@ CREATE TABLE doc_updates (
 ```
 
 Append on every local edit:
+
 ```js
-doc.on('update', async (update, origin) => {
-  if (origin === 'remote') return;       // don't echo back
-  await pg.query(
-    'INSERT INTO doc_updates (doc_id, update) VALUES ($1, $2)',
-    [docId, Buffer.from(update)]
-  );
+doc.on("update", async (update, origin) => {
+  if (origin === "remote") return; // don't echo back
+  await pg.query("INSERT INTO doc_updates (doc_id, update) VALUES ($1, $2)", [
+    docId,
+    Buffer.from(update),
+  ]);
 });
 ```
 
 Replay on load:
+
 ```js
-const { rows } = await pg.query(
-  'SELECT update FROM doc_updates WHERE doc_id = $1 ORDER BY seq',
-  [docId]
-);
+const { rows } = await pg.query("SELECT update FROM doc_updates WHERE doc_id = $1 ORDER BY seq", [
+  docId,
+]);
 const doc = new Y.Doc();
 for (const r of rows) Y.applyUpdate(doc, new Uint8Array(r.update));
 ```
 
 Compact periodically (`Y.mergeUpdates` collapses many deltas into one):
+
 ```js
-const merged = Y.mergeUpdates(rows.map(r => new Uint8Array(r.update)));
+const merged = Y.mergeUpdates(rows.map((r) => new Uint8Array(r.update)));
 // transactionally: replace all rows with one merged row
 ```
 
@@ -301,7 +309,7 @@ up:
 - Strategy B persists the **deltas**, appending.
 
 Both are valid `Uint8Array`s and both go through `Y.applyUpdate` — the
-difference is just *what* you choose to write.
+difference is just _what_ you choose to write.
 
 ## Wire protocol: sending bytes to a backend
 
@@ -310,15 +318,15 @@ a fallback for text-only channels, not the protocol.
 
 ### When to use what
 
-| Channel | Send | Why |
-|---|---|---|
-| WebSocket | `Uint8Array` (binary frame) | binary native |
-| WebRTC DataChannel | `Uint8Array` | binary native |
-| `fetch` / HTTP body | `Uint8Array` / `Blob` with `Content-Type: application/octet-stream` | binary native |
-| `postMessage` (workers, iframes) | `Uint8Array` | structured clone passes it through |
-| Server-Sent Events (text-only) | base64 | SSE is `text/event-stream` |
-| JSON field | base64 | JSON has no byte type |
-| URL / query string | base64url | URL is text |
+| Channel                          | Send                                                                | Why                                |
+| -------------------------------- | ------------------------------------------------------------------- | ---------------------------------- |
+| WebSocket                        | `Uint8Array` (binary frame)                                         | binary native                      |
+| WebRTC DataChannel               | `Uint8Array`                                                        | binary native                      |
+| `fetch` / HTTP body              | `Uint8Array` / `Blob` with `Content-Type: application/octet-stream` | binary native                      |
+| `postMessage` (workers, iframes) | `Uint8Array`                                                        | structured clone passes it through |
+| Server-Sent Events (text-only)   | base64                                                              | SSE is `text/event-stream`         |
+| JSON field                       | base64                                                              | JSON has no byte type              |
+| URL / query string               | base64url                                                           | URL is text                        |
 
 ### Yjs's own protocol
 
@@ -348,33 +356,37 @@ the missing ops travel back.
 ### Option 1 — `fetch` with a binary body (simplest, request/response)
 
 Browser:
-```js
-const update = Y.encodeStateAsUpdate(doc);            // Uint8Array
 
-await fetch('/api/docs/123', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/octet-stream' },
-  body: update,                                        // raw bytes — do NOT JSON.stringify
+```js
+const update = Y.encodeStateAsUpdate(doc); // Uint8Array
+
+await fetch("/api/docs/123", {
+  method: "POST",
+  headers: { "Content-Type": "application/octet-stream" },
+  body: update, // raw bytes — do NOT JSON.stringify
 });
 ```
 
 Server (Express):
+
 ```js
-app.post('/api/docs/:id',
-  express.raw({ type: 'application/octet-stream', limit: '10mb' }),
+app.post(
+  "/api/docs/:id",
+  express.raw({ type: "application/octet-stream", limit: "10mb" }),
   async (req, res) => {
-    const update = new Uint8Array(req.body);           // req.body is a Buffer
+    const update = new Uint8Array(req.body); // req.body is a Buffer
     const doc = await loadDoc(req.params.id);
     Y.applyUpdate(doc, update);
     await saveDoc(req.params.id, Y.encodeStateAsUpdate(doc));
     res.sendStatus(204);
-  }
+  },
 );
 ```
 
 Reading bytes back:
+
 ```js
-const res = await fetch('/api/docs/123');
+const res = await fetch("/api/docs/123");
 const update = new Uint8Array(await res.arrayBuffer());
 Y.applyUpdate(doc, update);
 ```
@@ -382,14 +394,15 @@ Y.applyUpdate(doc, update);
 ### Option 2 — WebSocket binary frames (best for live sync)
 
 Browser:
+
 ```js
-const ws = new WebSocket('wss://example.com/doc/123');
-ws.binaryType = 'arraybuffer';                         // give us bytes, not Blob
+const ws = new WebSocket("wss://example.com/doc/123");
+ws.binaryType = "arraybuffer"; // give us bytes, not Blob
 
 ws.onopen = () => ws.send(Y.encodeStateAsUpdate(doc));
 
-doc.on('update', (update, origin) => {
-  if (origin === ws) return;                           // don't echo
+doc.on("update", (update, origin) => {
+  if (origin === ws) return; // don't echo
   if (ws.readyState === WebSocket.OPEN) ws.send(update);
 });
 
@@ -399,14 +412,15 @@ ws.onmessage = (ev) => {
 ```
 
 Server (Node, `ws` package):
+
 ```js
-import { WebSocketServer } from 'ws';
+import { WebSocketServer } from "ws";
 const wss = new WebSocketServer({ port: 8080 });
 const doc = new Y.Doc();
 
-wss.on('connection', (sock) => {
-  sock.send(Y.encodeStateAsUpdate(doc));               // initial state
-  sock.on('message', (data) => {
+wss.on("connection", (sock) => {
+  sock.send(Y.encodeStateAsUpdate(doc)); // initial state
+  sock.on("message", (data) => {
     const update = new Uint8Array(data);
     Y.applyUpdate(doc, update, sock);
     for (const peer of wss.clients) {
@@ -422,22 +436,21 @@ is ~30 lines.
 ### Option 3 — `navigator.sendBeacon` (fire-and-forget on tab close)
 
 ```js
-window.addEventListener('beforeunload', () => {
+window.addEventListener("beforeunload", () => {
   const update = Y.encodeStateAsUpdate(doc);
-  navigator.sendBeacon(
-    '/api/docs/123',
-    new Blob([update], { type: 'application/octet-stream' })
-  );
+  navigator.sendBeacon("/api/docs/123", new Blob([update], { type: "application/octet-stream" }));
 });
 ```
 
 ### Option 4 — JSON wrapping (only if you must)
 
 When stuck inside a JSON-only API:
+
 ```js
-const msg = { docId, kind: 'update', payload: toBase64(update) };
-fetch('/sync', { method: 'POST', body: JSON.stringify(msg) });
+const msg = { docId, kind: "update", payload: toBase64(update) };
+fetch("/sync", { method: "POST", body: JSON.stringify(msg) });
 ```
+
 But prefer Option 1 — native binary, no encoding tax.
 
 ### Common gotchas
@@ -447,7 +460,7 @@ But prefer Option 1 — native binary, no encoding tax.
    or base64-wrap inside JSON if JSON is mandatory.
 2. **Set `ws.binaryType = 'arraybuffer'`.** Default in some browsers is
    `'blob'`, which forces an extra `await blob.arrayBuffer()` step.
-3. **`Buffer` vs `Uint8Array`.** Node's `Buffer` *is* a `Uint8Array` subclass.
+3. **`Buffer` vs `Uint8Array`.** Node's `Buffer` _is_ a `Uint8Array` subclass.
    `Y.applyUpdate` accepts both; `new Uint8Array(buf)` is the safe explicit
    form.
 4. **Body parsers.** Don't put `express.json()` in front of a binary route —
@@ -474,8 +487,8 @@ correctly (sync handshake, awareness, reconnection, framing):
 The honest one-liner: **there are no conflicts to resolve**, in the
 traditional sense. There's no "server takes the latest", no diff3 merge, no
 rebasing. The CRDT is designed so any two histories of operations merge to
-the **same final state** regardless of order. This property is *strong
-eventual consistency*.
+the **same final state** regardless of order. This property is _strong
+eventual consistency_.
 
 #### Stable IDs, not indices
 
@@ -528,7 +541,7 @@ the same key concurrently is resolved by **clientId tiebreak** (effectively
 deterministic last-write-wins). If you need merge logic for a value, model
 it with a nested CRDT instead of a primitive.
 
-#### What you *don't* get
+#### What you _don't_ get
 
 Yjs guarantees **convergence**, not **intent**. Classic example:
 
@@ -547,20 +560,20 @@ semantic conflict, not a data conflict. If you need it, build a UI on top
 
 ```js
 // On every replica:
-doc.on('update', (update, origin) => {
-  if (origin === 'remote') return;          // don't echo
-  channel.send(update);                      // → other peer
+doc.on("update", (update, origin) => {
+  if (origin === "remote") return; // don't echo
+  channel.send(update); // → other peer
 });
 
 channel.onMessage = (update) => {
-  Y.applyUpdate(doc, update, 'remote');     // tag origin so we don't echo back
+  Y.applyUpdate(doc, update, "remote"); // tag origin so we don't echo back
 };
 ```
 
 Transport doesn't matter — WebSocket, WebRTC, BroadcastChannel, postMessage,
 even a polling fetch loop. Yjs only cares that updates arrive eventually.
 
-### What this demo *actually* does with two tabs (the unflattering truth)
+### What this demo _actually_ does with two tabs (the unflattering truth)
 
 The current `src/App.jsx` does **not** sync tabs. Here's what happens:
 
@@ -569,7 +582,7 @@ The current `src/App.jsx` does **not** sync tabs. Here's what happens:
    in-memory object, same starting state).
 3. Tab A types `"hi"` → A's `'update'` fires → A writes its full encoded
    state to `localStorage`.
-4. Tab B types `"yo"` → B's `'update'` fires → B writes *its* full encoded
+4. Tab B types `"yo"` → B's `'update'` fires → B writes _its_ full encoded
    state to `localStorage`, **clobbering A's**.
 
 The CRDT itself is fine — if A's and B's docs ever met, they'd merge
@@ -582,11 +595,11 @@ limitation, not a CRDT failure.**
 The smallest change that makes two tabs collaborate live:
 
 ```js
-const bc = new BroadcastChannel('crdt-editor');
+const bc = new BroadcastChannel("crdt-editor");
 
-doc.on('update', (update, origin) => {
-  if (origin === bc) return;                 // skip echoes from ourselves
-  bc.postMessage(update);                    // structured-cloned Uint8Array
+doc.on("update", (update, origin) => {
+  if (origin === bc) return; // skip echoes from ourselves
+  bc.postMessage(update); // structured-cloned Uint8Array
   localStorage.setItem(DOC_KEY, toBase64(Y.encodeStateAsUpdate(doc)));
 });
 
@@ -604,8 +617,8 @@ Drop-in replacement for our hand-rolled `localStorage` glue, with cross-tab
 sync built in (uses IndexedDB + a `BroadcastChannel` internally):
 
 ```js
-import { IndexeddbPersistence } from 'y-indexeddb';
-const persistence = new IndexeddbPersistence('crdt-editor', doc);
+import { IndexeddbPersistence } from "y-indexeddb";
+const persistence = new IndexeddbPersistence("crdt-editor", doc);
 ```
 
 #### Fix #3 — a real backend
@@ -620,11 +633,11 @@ client.
 Assume Fix #1 is in place. The doc says `"hello world"`. Both tabs have the
 cursor at index 5 (after `"hello"`).
 
-| Time | Tab A | Tab B | Both tabs converge on |
-|---|---|---|---|
-| t=0 | types `","` at 5 | — | `"hello, world"` |
-| t=0+ε | — | types `"!"` at 5 | merge: insert at 5 with origin = `'o'`'s ID, tiebreak by clientId |
-| final | | | `"hello,! world"` or `"hello!, world"` — same on both tabs |
+| Time  | Tab A            | Tab B            | Both tabs converge on                                             |
+| ----- | ---------------- | ---------------- | ----------------------------------------------------------------- |
+| t=0   | types `","` at 5 | —                | `"hello, world"`                                                  |
+| t=0+ε | —                | types `"!"` at 5 | merge: insert at 5 with origin = `'o'`'s ID, tiebreak by clientId |
+| final |                  |                  | `"hello,! world"` or `"hello!, world"` — same on both tabs        |
 
 You can't predict which order ends up visible (clientIds are random per
 `Y.Doc`), but you can predict that **both tabs see the same string** and
@@ -665,7 +678,7 @@ There is no router, no state library, no backend — `App.jsx` is the demo.
 
 ### How the textarea ↔ `Y.Text` binding works
 
-A textarea's `onChange` gives us the *new* full string. To turn that into a
+A textarea's `onChange` gives us the _new_ full string. To turn that into a
 real CRDT op (instead of a blob replace), `App.jsx` does a tiny prefix/suffix
 diff against the current `ytext.toString()` and emits the minimal
 `ytext.delete(index, n)` + `ytext.insert(index, str)` pair inside a

@@ -1,4 +1,6 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   margin: 0;
@@ -10,7 +12,10 @@ body {
   margin: 0 auto;
   padding: 24px;
 }
-h1 { margin-top: 0; font-size: 20px; }
+h1 {
+  margin-top: 0;
+  font-size: 20px;
+}
 .layout {
   display: grid;
   grid-template-columns: 1fr 280px;
@@ -40,10 +45,20 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
-button:hover { background: #f0f0f0; }
-button.primary { background: #2563eb; color: white; border-color: #2563eb; }
-button.primary:hover { background: #1d4ed8; }
-button.danger { color: #b91c1c; }
+button:hover {
+  background: #f0f0f0;
+}
+button.primary {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+button.primary:hover {
+  background: #1d4ed8;
+}
+button.danger {
+  color: #b91c1c;
+}
 .history {
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -52,7 +67,10 @@ button.danger { color: #b91c1c; }
   max-height: 420px;
   overflow-y: auto;
 }
-.history h2 { margin: 0 0 8px; font-size: 14px; }
+.history h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
 .snapshot {
   border: 1px solid #e5e5e5;
   border-radius: 4px;
@@ -74,10 +92,17 @@ button.danger { color: #b91c1c; }
   overflow: hidden;
   margin-bottom: 6px;
 }
-.snapshot .actions { display: flex; gap: 6px; }
+.snapshot .actions {
+  display: flex;
+  gap: 6px;
+}
 .status {
   font-size: 12px;
   color: #666;
   margin-top: 8px;
 }
-.empty { color: #888; font-size: 13px; font-style: italic; }
+.empty {
+  color: #888;
+  font-size: 13px;
+  font-style: italic;
+}
